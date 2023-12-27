@@ -2,7 +2,6 @@ import express from 'express';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
-import Collect from '@supercharge/collections'
 
 const app = express();
 
