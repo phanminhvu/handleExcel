@@ -14,13 +14,20 @@ app.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) {
         return res.status(400).send('No file uploaded.');
     }
+    const schoolId = req.query.schoolId;
     const workbook = xlsx.read(req.file.buffer, {type: 'buffer'});
     const sheetName = workbook.SheetNames[0]; // Assuming only one sheet for simplicity
     const worksheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(worksheet);
-    const schoolId = req.query.schoolId;
+
+    let data = xlsx.utils.sheet_to_json(worksheet, {range:1});
+    // data = data.slice(3);
+    // Delete the first property of every object in arr
+    data.forEach(obj => delete obj[Object.keys(obj)[0]]);
+
+
     const checkFileExist = fs.existsSync(`${schoolId}.xlsx`);
     const ws = xlsx.utils.json_to_sheet(data);
+    // console.log(data)
     let wb = {}
     // console.log(checkFileExist)
     if (checkFileExist) {
@@ -33,8 +40,10 @@ app.post('/upload', upload.single('file'), (req, res) => {
     }
     xlsx.writeFile(wb, `${schoolId}.xlsx`);
 
-    res.json({success: true,
-    message: 'File uploaded successfully for schoolId: ' + schoolId + '!'
+    res.json({
+        success: true,
+        message: 'File uploaded successfully for schoolId: ' + schoolId + '!',
+        data: data
     });
 });
 
@@ -47,9 +56,9 @@ app.get('/distinct', upload.single('file'), async (req, res) => {
     sheetNames.forEach((sheetName) => {
         const worksheet = wb.Sheets[sheetName];
         let item = xlsx.utils.sheet_to_json(worksheet);
-        item = item.slice(3);
-// Delete the first property of every object in arr
-        item.forEach(obj => delete obj[Object.keys(obj)[0]]);
+//         item = item.slice(3);
+// // Delete the first property of every object in arr
+//         item.forEach(obj => delete obj[Object.keys(obj)[0]]);
         data = data.concat(item);
     });
 
@@ -65,7 +74,8 @@ app.get('/distinct', upload.single('file'), async (req, res) => {
     res.json({
         success: true,
         message: 'Distinct data for schoolId: ' + schoolId + '!',
-        data: uniqueArr});
+        data: uniqueArr
+    });
 });
 
 
