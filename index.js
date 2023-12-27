@@ -33,7 +33,9 @@ app.post('/upload', upload.single('file'), (req, res) => {
     }
     xlsx.writeFile(wb, `${schoolId}.xlsx`);
 
-    res.json({data});
+    res.json({success: true,
+    message: 'File uploaded successfully for schoolId: ' + schoolId + '!'
+    });
 });
 
 
@@ -60,7 +62,10 @@ app.get('/distinct', upload.single('file'), async (req, res) => {
     }
 
     const uniqueArr = filterUnique(data);
-    res.json({uniqueArr});
+    res.json({
+        success: true,
+        message: 'Distinct data for schoolId: ' + schoolId + '!',
+        data: uniqueArr});
 });
 
 
