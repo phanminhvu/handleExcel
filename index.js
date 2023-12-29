@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
+import https from'https' ;
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import AWS from 'aws-sdk';
@@ -9,6 +10,15 @@ const app = express();
 app.use(cors({origin: '*'}));
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
+
+const privateKey = fs.readFileSync('./ssl/key.pem', 'utf8');
+const certificate = fs.readFileSync('./ssl/certificate.pem', 'utf8');
+
+const credentials = {
+    key: privateKey,
+    cert: certificate
+};
+
 
 AWS.config.update({
     accessKeyId: 'LF73BWTO--IHOMPXPEGSMW==',
@@ -283,6 +293,8 @@ app.get('/distinct', upload.single('file'), async (req, res) => {
 
 // Start the server
 const PORT = 9281;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+
+const httpsServer = https.createServer(credentials, app);
+httpsServer.listen(PORT, () => {
+    console.log(`Server is running on HTTPS port ${PORT}`);
 });
