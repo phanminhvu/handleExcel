@@ -2,13 +2,14 @@ import express from 'express';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
-import https from'https' ;
+import https from 'https' ;
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import AWS from 'aws-sdk';
+
 const app = express();
 app.use(cors({origin: '*'}));
-app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.urlencoded({extended: false}))
 app.use(bodyParser.json())
 
 const privateKey = fs.readFileSync('./ssl/key.pem', 'utf8');
@@ -20,19 +21,25 @@ const credentials = {
 };
 
 
-AWS.config.update({
-    accessKeyId: 'LF73BWTO--IHOMPXPEGSMW==',
-    secretAccessKey: 'EC574FEE-1A92-4CF3-9656-8915C4812759',
-    region: 'YOUR_REGION' // Update with your AWS region
-});
+const accessKeyId = 'WQKE34D4QT1LXFXAOOQNPG=='
+const secretAccessKey = 'C87E0FDB-2C6A-44E5-9CAF-B9180BFBDFA4'
 
-const s3 = new AWS.S3();
-const bucketName = 'YOUR_BUCKET_NAME';
+
+//
+// AWS.config.update({
+//     accessKeyId: 'WQKE34D4QT1LXFXAOOQNPG==',
+//     secretAccessKey: 'C87E0FDB-2C6A-44E5-9CAF-B9180BFBDFA4',
+//     region: 'ap-southeast-1' // Update with your AWS region
+// });
+
+
+const bucketName = 'exceltoflechallange-stc';
 
 
 // Set up Multer to handle file uploads
 const storage = multer.memoryStorage();
 const upload = multer({storage: storage});
+
 function validateForm(fields) {
 
     const fullName = fields['Họ và tên'];
@@ -78,7 +85,7 @@ function validateForm(fields) {
     // Check if all validations pass
     const isValid = isFullNameValid && isDateOfBirthValid && isMonthOfBirthValid &&
         isYearOfBirthValid && isGenderValid && isIdNumberValid && isGradeValid && isEmailValid
-        isParentPhoneNumberValid;
+    isParentPhoneNumberValid;
     let message = '';
     if (!isFullNameValid) {
         message += ' <br /> Họ và tên không hợp lệ <br /> ';
@@ -107,12 +114,77 @@ function validateForm(fields) {
     if (!isParentPhoneNumberValid) {
         message += '<br />Số điện thoại không hợp lệ<br />';
     }
-    return  {
-        check : isValid,
+    return {
+        check: isValid,
         message: message
     };
 
 }
+
+const uploadFileService = (fileName, ws) => {
+    const params = {
+        Bucket: bucketName,
+        Key: fileName
+    };
+
+    const s3 = new AWS.S3({
+        endpoint: "https://s3.sunteco.app",
+        credentials: {
+            accessKeyId: accessKeyId,
+            secretAccessKey: secretAccessKey,
+        },
+        s3ForcePathStyle: true,
+    });
+
+
+    s3.getObject(params, (err, data) => {
+        if (err) {
+            if (err.code === 'NoSuchKey') {
+                const wb = xlsx.utils.book_new();
+                xlsx.utils.book_append_sheet(wb, ws, 'Sheet1');
+                const uploadParams = {
+                    Bucket: bucketName,
+                    Key: fileName,
+                    Body: xlsx.write(wb, {type: 'buffer'})
+                };
+                s3.upload(uploadParams, (uploadErr) => {
+                    if (uploadErr) {
+                        console.error('Error uploading file to S3:', uploadErr);
+                    } else {
+                        console.log('File uploaded to S3');
+                    }
+                });
+            }
+        } else {
+            // Parse the Excel file content
+            const workbook = xlsx.read(data.Body);
+            // Modify the workbook as needed
+            const sheetNames = workbook.SheetNames;
+            console.log(sheetNames)
+
+            xlsx.utils.book_append_sheet(workbook, ws, `Sheet${sheetNames.length + 1}`);
+
+            // Convert the modified workbook back to a buffer
+            const updatedFile = xlsx.write(workbook, {type: 'buffer'});
+
+            // Upload the modified file back to S3, overwriting the existing file
+            const uploadParams = {
+                Bucket: bucketName,
+                Key: fileName,
+                Body: updatedFile
+            };
+            s3.upload(uploadParams, (uploadErr) => {
+                if (uploadErr) {
+                    console.error('Error updating file in S3:', uploadErr);
+                } else {
+                    console.log('File updated and uploaded to S3');
+                }
+            });
+        }
+    });
+};
+
+
 // API endpoint for file upload
 app.post('/upload', upload.single('file'), (req, res) => {
     if (!req.file) {
@@ -147,63 +219,30 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
     const fileName = `${schoolId}.xlsx`;
 
-    // const params = {
-    //     Bucket: bucketName,
-    //     Key: fileName
-    // };
 
     const checkFileExist = fs.existsSync(`${schoolId}.xlsx`);
     const ws = xlsx.utils.json_to_sheet(validArr);
     let wb = {}
 
-    // s3.getObject(params, (err, data) => {
-    //     if (err) {
-    //         console.error('Error getting file from S3:', err);
-    //     } else {
-    //         // Parse the Excel file content
-    //         const workbook = xlsx.read(data.Body, {type: 'buffer'});
-    //
-    //         // Modify the workbook as needed
-    //         const sheetNames = wb.SheetNames;
-    //         xlsx.utils.book_append_sheet(workbook, ws, `Sheet${sheetNames.length + 1}`);
-    //
-    //         // Convert the modified workbook back to a buffer
-    //         const updatedFile = xlsx.write(workbook, {type: 'buffer'});
-    //
-    //         // Upload the modified file back to S3, overwriting the existing file
-    //         const uploadParams = {
-    //             Bucket: bucketName,
-    //             Key: fileName,
-    //             Body: updatedFile
-    //         };
-    //         s3.upload(uploadParams, (uploadErr) => {
-    //             if (uploadErr) {
-    //                 console.error('Error updating file in S3:', uploadErr);
-    //             } else {
-    //                 console.log('File updated and uploaded to S3');
-    //             }
-    //         });
-    //     }
-    // });
-
+    uploadFileService(fileName, ws);
 
     // console.log(checkFileExist)
-    if (checkFileExist) {
-        wb = xlsx.readFile(`${schoolId}.xlsx`);
-        const sheetNames = wb.SheetNames;
-        xlsx.utils.book_append_sheet(wb, ws, `Sheet${sheetNames.length + 1}`);
-    } else {
-        wb = xlsx.utils.book_new();
-        xlsx.utils.book_append_sheet(wb, ws, 'Sheet1');
-    }
-    if(validArr.length > 0){
-        xlsx.writeFile(wb, `${schoolId}.xlsx`);
-    }
+    // if (checkFileExist) {
+    //     wb = xlsx.readFile(`${schoolId}.xlsx`);
+    //     const sheetNames = wb.SheetNames;
+    //     xlsx.utils.book_append_sheet(wb, ws, `Sheet${sheetNames.length + 1}`);
+    // } else {
+    //     wb = xlsx.utils.book_new();
+    //     xlsx.utils.book_append_sheet(wb, ws, 'Sheet1');
+    // }
+    // if(validArr.length > 0){
+    //     xlsx.writeFile(wb, `${schoolId}.xlsx`);
+    // }
     res.json({
         success: true,
         message: 'File uploaded successfully for schoolId: ' + schoolId + '!',
         data: {
-            inValidArr:  wrongArr,
+            inValidArr: wrongArr,
             validArr: validArr
         },
         invalidCount: wrongArr.length,
@@ -213,7 +252,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
 });
 
 
-app.post('/update',  async (req, res) => {
+app.post('/update', async (req, res) => {
     const schoolId = req.query.schoolId;
     const data = req.body;
     const {wrongArr, validArr} = data.reduce(
@@ -231,48 +270,39 @@ app.post('/update',  async (req, res) => {
         {wrongArr: [], validArr: []}
     );
 
-    const checkFileExist = fs.existsSync(`${schoolId}.xlsx`);
+    // const checkFileExist = fs.existsSync(`${schoolId}.xlsx`);
 
     const ws = xlsx.utils.json_to_sheet(validArr);
     let wb = {}
     // console.log(checkFileExist)
-    if (checkFileExist) {
-        wb = xlsx.readFile(`${schoolId}.xlsx`);
-        const sheetNames = wb.SheetNames;
-        xlsx.utils.book_append_sheet(wb, ws, `Sheet${sheetNames.length + 1}`);
-    } else {
-        wb = xlsx.utils.book_new();
-        xlsx.utils.book_append_sheet(wb, ws, 'Sheet1');
-    }
-    if(validArr.length > 0){
-        xlsx.writeFile(wb, `${schoolId}.xlsx`);
-    }
+    const fileName = `${schoolId}.xlsx`;
+    uploadFileService(fileName, ws);
+    // if (checkFileExist) {
+    //     wb = xlsx.readFile(`${schoolId}.xlsx`);
+    //     const sheetNames = wb.SheetNames;
+    //     xlsx.utils.book_append_sheet(wb, ws, `Sheet${sheetNames.length + 1}`);
+    // } else {
+    //     wb = xlsx.utils.book_new();
+    //     xlsx.utils.book_append_sheet(wb, ws, 'Sheet1');
+    // }
+    // if(validArr.length > 0){
+    //     xlsx.writeFile(wb, `${schoolId}.xlsx`);
+    // }
 
     res.json({
         success: true,
         message: 'File uploaded successfully for schoolId: ' + schoolId + '!',
         data: {
-            inValidArr:  wrongArr,
+            inValidArr: wrongArr,
             validArr: validArr
         },
         invalidCount: wrongArr.length,
         validCount: validArr.length,
         totalCount: data.length
     });
-    });
+});
 app.get('/distinct', upload.single('file'), async (req, res) => {
     const schoolId = req.query.schoolId;
-    const wb = xlsx.readFile(`${schoolId}.xlsx`);
-    const sheetNames = wb.SheetNames;
-    let data = [];
-    sheetNames.forEach((sheetName) => {
-        const worksheet = wb.Sheets[sheetName];
-        let item = xlsx.utils.sheet_to_json(worksheet);
-//         item = item.slice(3);
-// // Delete the first property of every object in arr
-//         item.forEach(obj => delete obj[Object.keys(obj)[0]]);
-        data = data.concat(item);
-    });
 
     function filterUnique(arr) {
         const seen = new Set();
@@ -282,12 +312,57 @@ app.get('/distinct', upload.single('file'), async (req, res) => {
         });
     }
 
-    const uniqueArr = filterUnique(data);
-    res.json({
-        success: true,
-        message: 'Distinct data for schoolId: ' + schoolId + '!',
-        data: uniqueArr
+    const fileName = `${schoolId}.xlsx`;
+    const params = {
+        Bucket: bucketName,
+        Key: fileName
+    };
+
+    const s3 = new AWS.S3({
+        endpoint: "https://s3.sunteco.app",
+        credentials: {
+            accessKeyId: accessKeyId,
+            secretAccessKey: secretAccessKey,
+        },
+        s3ForcePathStyle: true,
     });
+
+    s3.getObject(params, (err, data) => {
+        if (err) {
+            console.log(err)
+            res.json({
+                success: false,
+                message: 'Distinct data for schoolId: ' + schoolId + '!',
+                data: uniqueArr
+            });
+        } else {
+            // Parse the Excel file content
+            const workbook = xlsx.read(data.Body);
+            // Modify the workbook as needed
+            const sheetNames = workbook.SheetNames;
+            let dataArr = [];
+            sheetNames.forEach((sheetName) => {
+                const worksheet = workbook.Sheets[sheetName];
+                let item = xlsx.utils.sheet_to_json(worksheet);
+                dataArr = dataArr.concat(item);
+            });
+            const uniqueArr = filterUnique(dataArr);
+            res.json({
+                success: true,
+                message: 'Distinct data for schoolId: ' + schoolId + '!',
+                data: uniqueArr
+            });
+        }
+    });
+
+    // const wb = xlsx.readFile(`${schoolId}.xlsx`);
+    // const sheetNames = wb.SheetNames;
+    // let data = [];
+    // sheetNames.forEach((sheetName) => {
+    //     const worksheet = wb.Sheets[sheetName];
+    //     let item = xlsx.utils.sheet_to_json(worksheet);
+    //     data = data.concat(item);
+    // });
 });
 
 
