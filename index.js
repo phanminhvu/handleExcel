@@ -121,6 +121,15 @@ function validateForm(fields) {
 
 }
 
+
+function filterUnique(arr) {
+    const seen = new Set();
+    return arr.filter(obj => {
+        const stringified = JSON.stringify(obj);
+        return seen.has(stringified) ? false : seen.add(stringified);
+    });
+}
+
 const uploadFileService = (fileName, ws) => {
     const params = {
         Bucket: bucketName,
@@ -242,11 +251,14 @@ app.post('/upload', upload.single('file'), (req, res) => {
     // if(validArr.length > 0){
     //     xlsx.writeFile(wb, `${schoolId}.xlsx`);
     // }
+    ;
+
+
     res.json({
         success: true,
         message: 'File uploaded successfully for schoolId: ' + schoolId + '!',
         data: {
-            inValidArr: wrongArr,
+            inValidArr: filterUnique(wrongArr),
             validArr: resultArr
         },
         invalidCount: wrongArr.length,
@@ -302,7 +314,7 @@ app.post('/update', async (req, res) => {
         success: true,
         message: 'File uploaded successfully for schoolId: ' + schoolId + '!',
         data: {
-            inValidArr: wrongArr,
+            inValidArr: filterUnique(wrongArr),
             validArr: resultArr
         },
         invalidCount: wrongArr.length,
@@ -313,13 +325,7 @@ app.post('/update', async (req, res) => {
 app.get('/distinct', upload.single('file'), async (req, res) => {
     const schoolId = req.query.schoolId;
 
-    function filterUnique(arr) {
-        const seen = new Set();
-        return arr.filter(obj => {
-            const stringified = JSON.stringify(obj);
-            return seen.has(stringified) ? false : seen.add(stringified);
-        });
-    }
+
 
     const fileName = `${schoolId}.xlsx`;
     const params = {
