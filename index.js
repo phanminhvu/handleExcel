@@ -6,7 +6,7 @@ import https from 'https' ;
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import AWS from 'aws-sdk';
-
+import { v4 as uuidv4 } from 'uuid';
 const app = express();
 app.use(cors({origin: '*'}));
 app.use(bodyParser.urlencoded({extended: false}))
@@ -221,7 +221,13 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
 
     const checkFileExist = fs.existsSync(`${schoolId}.xlsx`);
-    const ws = xlsx.utils.json_to_sheet(validArr);
+    const resultArr = validArr.map ((item) => {
+        return {
+            ...item,
+            id: uuidv4()
+        }
+    });
+    const ws = xlsx.utils.json_to_sheet(resultArr);
     let wb = {}
 
     uploadFileService(fileName, ws);
@@ -243,10 +249,10 @@ app.post('/upload', upload.single('file'), (req, res) => {
         message: 'File uploaded successfully for schoolId: ' + schoolId + '!',
         data: {
             inValidArr: wrongArr,
-            validArr: validArr
+            validArr: resultArr
         },
         invalidCount: wrongArr.length,
-        validCount: validArr.length,
+        validCount: resultArr.length,
         totalCount: data.length
     });
 });
@@ -271,8 +277,13 @@ app.post('/update', async (req, res) => {
     );
 
     // const checkFileExist = fs.existsSync(`${schoolId}.xlsx`);
-
-    const ws = xlsx.utils.json_to_sheet(validArr);
+    const resultArr = validArr.map ((item) => {
+        return {
+            ...item,
+            id: uuidv4()
+        }
+    });
+    const ws = xlsx.utils.json_to_sheet(resultArr);
     let wb = {}
     // console.log(checkFileExist)
     const fileName = `${schoolId}.xlsx`;
@@ -294,10 +305,10 @@ app.post('/update', async (req, res) => {
         message: 'File uploaded successfully for schoolId: ' + schoolId + '!',
         data: {
             inValidArr: wrongArr,
-            validArr: validArr
+            validArr: resultArr
         },
         invalidCount: wrongArr.length,
-        validCount: validArr.length,
+        validCount: resultArr.length,
         totalCount: data.length
     });
 });

@@ -20,6 +20,7 @@
     "multer": "^1.4.5-lts.1",
     "openssl": "^2.0.0",
     "path": "^0.12.7",
+    "uuid": "^9.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
