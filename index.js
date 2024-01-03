@@ -160,8 +160,6 @@ const uploadFileService = (fileName, ws) => {
             const workbook = xlsx.read(data.Body);
             // Modify the workbook as needed
             const sheetNames = workbook.SheetNames;
-            console.log(sheetNames)
-
             xlsx.utils.book_append_sheet(workbook, ws, `Sheet${sheetNames.length + 1}`);
 
             // Convert the modified workbook back to a buffer
