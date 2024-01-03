@@ -263,7 +263,8 @@ app.post('/upload', upload.single('file'), (req, res) => {
         },
         invalidCount: wrongArr.length,
         validCount: resultArr.length,
-        totalCount: data.length
+        totalCount: data.length,
+        duplicateCount: wrongArr.length - filterUnique(wrongArr).length
     });
 });
 
@@ -319,7 +320,8 @@ app.post('/update', async (req, res) => {
         },
         invalidCount: wrongArr.length,
         validCount: resultArr.length,
-        totalCount: data.length
+        totalCount: data.length,
+        duplicateCount: wrongArr.length - filterUnique(wrongArr).length
     });
 });
 app.get('/distinct', upload.single('file'), async (req, res) => {
