@@ -66,15 +66,15 @@ function validateForm(fields) {
         (dayOfBirth <= 30 && [4, 6, 9, 11].includes(monthOfBirth)) ||
         (dayOfBirth <= 29 && monthOfBirth === 2);
 
-    const isMonthOfBirthValid = monthOfBirth <= 12;
+    const isMonthOfBirthValid = Number(monthOfBirth)  <= 12;
 
-    const isYearOfBirthValid = yearOfBirth >= 1900;
+    const isYearOfBirthValid = Number(yearOfBirth)  >= 1900;
 
-    const isGenderValid = gender === 0 || gender === 1;
+    const isGenderValid = Number(gender)   === 0 || Number(gender)     === 1;
 
     const isIdNumberValid = !idNumber || isNumber.test(idNumber);
 
-    const isGradeValid = grade <= 12;
+    const isGradeValid = Number(grade)   <= 12;
 
     // Other validations for each field...
     const phoneRegex = /^(0|\+84)(\d{9,10})$/;
@@ -120,7 +120,6 @@ function validateForm(fields) {
     };
 
 }
-
 
 function filterUnique(arr) {
     const seen = new Set();
@@ -252,7 +251,6 @@ app.post('/upload', upload.single('file'), (req, res) => {
     //     xlsx.writeFile(wb, `${schoolId}.xlsx`);
     // }
     ;
-
 
     res.json({
         success: true,
