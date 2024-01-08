@@ -263,7 +263,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
     const sheetName = workbook.SheetNames[0]; // Assuming only one sheet for simplicity
     const worksheet = workbook.Sheets[sheetName];
 
-    let data = xlsx.utils.sheet_to_json(worksheet, {range: 1});
+    let data = xlsx.utils.sheet_to_json(worksheet, {range: 8})
     // data = data.slice(3);
     // Delete the first property of every object in arr
     data.forEach(obj => delete obj[Object.keys(obj)[0]]);
