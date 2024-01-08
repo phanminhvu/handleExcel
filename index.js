@@ -7,10 +7,46 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
+import sql from 'mssql';
+
 const app = express();
 app.use(cors({origin: '*'}));
 app.use(bodyParser.urlencoded({extended: false}))
 app.use(bodyParser.json())
+
+
+const config = {
+    user: 'sa',
+    password: '1Qaz2wsx#',
+    server: '103.9.211.95',
+    port: 15789,
+    database: 'TOEFL_CHALLENGE_V2',
+    options: {
+        encrypt: true, // For encrypted connection if needed
+        trustServerCertificate: true // For self-signed certificates
+    },
+    pool: {
+        max: 10,
+        min: 0,
+        idleTimeoutMillis: 30000
+    }
+};
+
+
+async function connectToDB() {
+    try {
+        const pool = await sql.connect(config);
+        console.log('Connected to the database!');
+        return pool;
+    } catch (err) {
+        console.error('Error connecting to the database:', err);
+        throw err;
+    }
+}
+
+
+
+
 
 const privateKey = fs.readFileSync('./ssl/key.pem', 'utf8');
 const certificate = fs.readFileSync('./ssl/certificate.pem', 'utf8');
@@ -46,7 +82,7 @@ function validateForm(fields) {
     const dayOfBirth = fields['Ngày sinh'];
     const monthOfBirth = fields['Tháng sinh'];
     const yearOfBirth = fields['Năm sinh'];
-    const gender = fields['Giới Tính'];
+    const gender = fields['Giới Tính'] === "Nam" ? 0 : 1;
     const idNumber = fields['Số CCCD/CMT\\r\\n(nếu có)'];
     const grade = fields['Khối'];
     const className = fields['Lớp'];
@@ -80,7 +116,7 @@ function validateForm(fields) {
     const phoneRegex = /^(0|\+84)(\d{9,10})$/;
 
     // Validation for parentPhoneNumber (specifically <= 10 digits)
-    const isParentPhoneNumberValid = parentPhoneNumber.length <= 10 && isNumber.test(parentPhoneNumber) && phoneRegex.test(parentPhoneNumber);
+    const isParentPhoneNumberValid = parentPhoneNumber?.length <= 10 && isNumber.test(parentPhoneNumber) && phoneRegex.test(parentPhoneNumber);
     const isEmailValid = isEmail.test(email);
     // Check if all validations pass
     const isValid = isFullNameValid && isDateOfBirthValid && isMonthOfBirthValid &&
@@ -119,6 +155,32 @@ function validateForm(fields) {
         message: message
     };
 
+}
+
+
+
+const convertData = (data, schoolId) => {
+    let result = [];
+    data.forEach((item) => {
+        result.push({
+            FullName:   item["Họ và tên"] ,
+            DayOfBirth: item["Ngày sinh"] ,
+            MonthOfBirth:  item["Tháng sinh"]  ,
+            YearOfBirth:   item["Năm sinh"] ,
+            Gender: item["Giới Tính"]  ,
+            IdNo: item["Số CCCD/CMT\r\n(nếu có)"] ,
+            Block :  item["Khối"] ,
+            Class:  item["Lớp"] ,
+            FatherName:   item["Họ và tên phụ huynh thí sinh\r\n(Bố)"] ,
+            MotherName:  item["Họ và tên phụ huynh thí sinh\r\n(Mẹ)"] ,
+            Email:  item["Email"] ,
+            Tel:  item["Số điện thoại của Phụ huynh\r\n(bắt buộc)"] ,
+            Address:  item[ "Địa chỉ liên hệ của gia đình"] ,
+            Note:  item["Ghi chú"] ,
+            SchoolId : schoolId,
+        });
+    }  );
+    return result;
 }
 
 function filterUnique(arr) {
@@ -324,7 +386,6 @@ app.post('/update', async (req, res) => {
 });
 app.get('/distinct', upload.single('file'), async (req, res) => {
     const schoolId = req.query.schoolId;
-
 
 
     const fileName = `${schoolId}.xlsx`;
